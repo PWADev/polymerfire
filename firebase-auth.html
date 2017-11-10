@@ -239,16 +239,16 @@ be a problem.
          * @return {Promise} Promise that handles success and failure.
          */
         signInWithPhoneNumber: function(phoneNumber) {
-          var appVerifier = new firebase.auth.RecaptchaVerifier(document.getElementById('recaptcha-container'));
-          return this._handleSignIn(firebase.auth().signInWithPhoneNumber(phoneNumber, appVerifier)
-            .then(function(confirmationResult) {
-              window.confirmationResult = confirmationResult;
-              appVerifier.clear();
-            })
-            .catch(function(err) {
-              appVerifier.clear();
-              throw err;
-            }));
+          return this._handleSignIn(new Promise((resolve, reject) => {
+            window.FirebasePlugin.verifyPhoneNumber(
+              phoneNumber,
+              120, // Timeout duration
+              credential => {
+                window.verificationId = credential.verificationId;
+                return resolve(credential.verificationId)
+              },
+              reject);
+          }));
         },
 
         /**
@@ -258,7 +258,8 @@ be a problem.
          * @return {Promise} Promise that handles success and failure.
          */
         confirmCode: function(code) {
-          return this._handleSignIn(window.confirmationResult.confirm(code));
+          let signInCredential = firebase.auth.PhoneAuthProvider.credential(verificationId, code);
+          return this._handleSignIn(firebase.auth().signInWithCredential(signInCredential));
         },
 
         /**
